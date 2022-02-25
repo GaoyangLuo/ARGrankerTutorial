@@ -107,40 +107,56 @@ kraken2-build --db ~/db/kraken2/202203 --special greengenes --threads 4
 ### QC
 trimming
 ```sh
-#!/bin/bash
-#PBS -N trimmomatic
-#PBS -l nodes=c006:ppn=32
-workdir=/lomi_home/gaoyang/st_test/AUS_ERP124866/workdir
+ 
 
-cd $workdir
+source /lomi_home/gaoyang/miniconda/bin/activate argranker
 
-mkdir qc_control && cd $_
-mkdir ../clean_reads 
-ln -s /lomi_home/gaoyang/st_test/AUS_ERP124866/0_extra_fq/test/*fastq .
-
-source ~/.bashrc
-source activate argranker
 #fqc
-fastqc ./* -t 4 -o /lomi_home/gaoyang/st_test/AUS_ERP124866/workdir/qc_control
+/lomi_home/gaoyang/miniconda/envs/argranker/bin/fastqc ./*fastq -t 20 -o /lomi_home/gaoyang/microplastic_test/aus_ERP124866/workdir/qc_control
 
-# Single End
+#SingleEnd
 for filename in *.fastq
 do
-
 base=$(basename $filename .fastq)
-echo $base
-
-trimmomatic SE -threads 4 -phred33 \
-    -trimlog ${base}.trimmomatic.log \
-    ${base}.fastq \
-    ${base}_clean.fq \
-    ILLUMINACLIP:/lomi_home/gaoyang/software/trimmomatic/adapters/TruSeq3-SE.fa:2:40:15 \
-    LEADING:2 \
-    TRAILING:2 \
-    SLIDINGWINDOW:4:20 \
-    MINLEN:25
+python /lomi_home/gaoyang/miniconda/envs/argranker/share/trimmomatic//trimmomatic SE -threads 6 -phred33 ${base}.fastq ${base}_clean.fq ILLUMINACLIP:/lomi_home/gaoyang/miniconda/envs/argranker/share/trimmomatic/adapters/TruSeq3-SE.fa:2:40:15 LEADING:2 TRAILING:2 SLIDINGWINDOW:4:20 MINLEN:25
 done
 
+#PairEnd
+for filename in *.man_1.fastq
+do
+base=$(basename $filename .man_1.fastq)
+
+reads_1=${base}.man_1.fastq
+reads_2=${base}.man_2.fastq
+
+python /lomi_home/gaoyang/miniconda/envs/argranker/share/trimmomatic//trimmomatic PE -threads 4 -phred33 ${reads_1} ${reads_2} ${base}_clean_1.fq ${base}_u1 ${base}_clean_2.fq ${base}_u2 \
+ILLUMINACLIP:/lomi_home/gaoyang/miniconda/envs/argranker/share/trimmomatic/adapters/TruSeq3-PE.fa:2:40:15 \
+LEADING:2 TRAILING:2 \
+SLIDINGWINDOW:4:20 MINLEN:25
+done
+
+#fqc_again
+/lomi_home/gaoyang/miniconda/envs/argranker/bin/fastqc ./*fastq -t 4 -o /lomi_home/gaoyang/st_test/AUS_ERP124866/workdir/qc_control
+```
+
+### Classify_ARGs
+After clean reads preparation, we can run arg_ranker to classify ARGs.
+```sh
+#creat a directory to resotry all the soft link of .fq files
+KKDB=/lomi_home/gaoyang/db/kraken2/202203
+mkdir run && cd $_
+dir=`pwd`
+ln -s /lomi_home/gaoyang/microplastic_test/aus_ERP124866/1_clean/* .
+#$input
+input=${dir}
+#activate_environment
+source /lomi_home/gaoyang/miniconda/bin/activate argranker
+#start_running
+arg_ranker -i ${input} -t 4 -kkdb $KKDB
+#follow_the_tips
+chomd +x $(dirname `pwd`)/arg_ranking/script_output/arg_ranker.sh
+#run_arg_ranker.sh
+sh $(dirname `pwd`)/arg_ranking/script_output//arg_ranker.sh
 ```
 
 

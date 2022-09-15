@@ -1,4 +1,4 @@
-# ARG_ranker Tutorial for Gaoyang
+# ARG_ranker Tutorial by Gaoyang
 ---
 ## Preset relevant software
 Download relevant software.
